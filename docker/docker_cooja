@@ -1,0 +1,7 @@
+#!/bin/sh
+base=${2-/home/aoliveira/docker_simulations}
+scp aoliveira@citysdk.tecnico.ulisboa.pt:$base/*.c  aoliveira@citysdk.tecnico.ulisboa.pt:$base/*.h aoliveira@citysdk.tecnico.ulisboa.pt:$base/Makefile* aoliveira@citysdk.tecnico.ulisboa.pt:$base/*.js /home/user/simulations
+cd /home/user/simulations
+scp aoliveira@citysdk.tecnico.ulisboa.pt:$base/$1/final.log aoliveira@citysdk.tecnico.ulisboa.pt:$base/$1/flux.log aoliveira@citysdk.tecnico.ulisboa.pt:$base/$1/$1.csc /home/user/simulations/
+cooja $1.csc
+scp mob.pcap *log aoliveira@citysdk.tecnico.ulisboa.pt:$base/$1/

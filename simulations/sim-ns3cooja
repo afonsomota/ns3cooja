@@ -1,0 +1,15 @@
+#!/bin/bash
+screen -S $1 -L -dm sh cooja_increment.sh "$@"
+echo "$@"
+while true; do
+  n=`screen -ls | grep Sockets | grep -v No | cut -f1 -d" "`
+  if [ ! -z $n ]; then
+    if [ $n -gt 16 ];then
+      sleep 60
+    else
+      break
+    fi
+  else
+    break
+  fi
+done

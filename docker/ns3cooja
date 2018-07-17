@@ -1,0 +1,76 @@
+#!/bin/bash
+
+SIM=$1
+NS3_SIM=${2-lte-multiuser}
+NS3_SEED=${3-1}
+NS3_ARGS=${4}
+
+mkdir ${SIM_HOME}
+cp -r ${HOME}/simulations_host/* ${SIM_HOME}
+cp -r ${HOME}/simulations_host/ns3/* $NS3_HOME
+
+cd $NS3_HOME
+./waf
+
+cd ${SIM_HOME}
+mkdir wait
+touch wait/start
+touch wait/end
+cp $SIM/$SIM.csc .
+rm *.log
+cp $SIM/*.log .
+cooja $SIM.csc > cooja.out &
+tail -f cooja.out &
+
+inotifywait -t 1800 -e CLOSE $SIM_HOME/wait/start || wait_status=$?
+
+if [ $wait_status -eq "2" ]
+then
+  echo "COOJAERROR" > $SIM_HOME/log_coojaerror.log
+fi
+
+cd $CONTIKI_NG/tools
+make tunslip6
+cd $NS3_HOME
+
+sudo CONTIKI_NG=$CONTIKI_NG ./waf --run "scratch/$NS3_SIM --seed=$NS3_SEED $NS3_ARGS" 2>${SIM_HOME}/log_error.log > ns3.out &
+tail -f ${SIM_HOME}/log_error.log &
+
+capture_ifs  &
+
+inotifywait -t 1800 -e CLOSE $SIM_HOME/wait/end || wait_status=$?
+
+if [ $wait_status -eq "2" ]
+then
+  echo "COOJAFREEZE" > $SIM_HOME/log_coojaerror.log
+fi
+
+echo $(ps aux | grep $2 | grep -v grep | grep -vE "user\s*1\s" )
+sudo kill -2 $(ps aux | grep $2 | grep -v grep | grep -vE "user\s*1\s"  | awk '{print $2}')
+echo $(ps aux | grep tcpdump | grep -v grep | awk '{print $2}')
+sudo kill -2 $(ps aux | grep tcpdump | grep -v grep | awk '{print $2}')
+
+sleep 10
+
+
+grep EventJitter ns3.out 
+grep EventJitter ${SIM_HOME}/cooja.out
+grep Ns3EventJitter ns3.out > ${SIM_HOME}/log_jitter.log
+grep CoojaEventJitter ${SIM_HOME}/cooja.out >> ${SIM_HOME}/log_jitter.log
+cat log_jitter.log >> final.log
+
+cd $SIM_HOME
+
+for i in *.pcap; do
+  echo $i
+  tshark -r $i -Y 'udp' -t e  -o data.show_as_text:TRUE -e frame.time_epoch -e ipv6.src -e ipv6.dst -e data.text -Tfields > ${SIM_HOME}/log_if$i.log
+done
+
+rm -r results
+
+mkdir results
+
+mv *.log results
+#mv *.pcap results
+
+#sudo cp -v -n ${SIM_HOME}/*.log ${HOME}/simulations_host

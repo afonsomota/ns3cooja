@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#wait for tunslip to start
+while [ -z "$(ip -o link | awk -F': ' '{print $2}' | grep cot)" ]; do
+	sleep 0.1
+done
+
+sleep 0.2
+
+for i in $(ip -o link | awk -F': ' '{print $2}' | grep 'cot\|nst'); do
+  echo "Capturing on $i"
+  sudo tcpdump -i $i -w ${SIM_HOME}/$i.pcap &
+#  tshark -i $i -t e  -o data.show_as_text:TRUE -e frame.time_epoch -e ipv6.src -e ipv6.dst -e data.text -Tfields > ${SIM_HOME}/log_if$i.log &
+done

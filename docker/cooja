@@ -1,0 +1,1 @@
+java -Xms1G -Xmx3G -jar $COOJA_HOME/dist/cooja.jar -nogui="$1" -contiki=$CONTIKI_NG
